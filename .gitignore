@@ -25,4 +25,6 @@ logs/
 *.db-shm
 *.db-wal
 *.db.enc
+*.sqlite
+.*.sqlite
 *.key

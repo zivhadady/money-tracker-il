@@ -1,0 +1,16 @@
+# Ignore dependencies and host-specific binaries
+node_modules
+bin
+
+# Ignore any private personal data, profiles, and databases
+data/*.db
+data/*.db.enc
+data/browser_profiles
+data/.*.key
+data/*.key
+
+# Git and logs
+.git
+*.log
+npm-debug.log*
+.DS_Store

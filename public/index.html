@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Money Tracker IL | ניהול הכנסות והוצאות חכם בכל החשבונות והכרטיסים</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">💎</div>
+        <div>
+          <h1 class="brand-title">Money Tracker IL</h1>
+          <p class="brand-subtitle">בקרה פיננסית לכל הבנקים והאשראי</p>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-btn active" data-view="dashboard">
+          <span class="nav-icon">📊</span>
+          <span>דשבורד ותמונת מצב</span>
+        </button>
+        <button class="nav-btn" data-view="transactions">
+          <span class="nav-icon">📑</span>
+          <span>כל התנועות והחיובים</span>
+        </button>
+        <button class="nav-btn" data-view="accounts">
+          <span class="nav-icon">🏦</span>
+          <span>חשבונות בנק וכרטיסי אשראי</span>
+        </button>
+        <button class="nav-btn" data-view="budgets">
+          <span class="nav-icon">🎯</span>
+          <span>תקציב חודשי ויעדי חיסכון</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-quick-actions">
+        <button class="btn btn-primary btn-block" id="btnSyncAllSidebar">
+          <span>🔄</span> סנכרן את כל החשבונות
+        </button>
+        <button class="btn btn-secondary btn-block" id="btnOpenImportModal">
+          <span>📥</span> ייבוא קובץ אקסל / CSV
+        </button>
+        <button class="btn btn-outline btn-block" id="btnOpenManualTxModal">
+          <span>➕</span> הוספת תנועה ידנית
+        </button>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="security-badge" id="securityVaultBadge" style="cursor:pointer;" title="לחץ להגדרת סיסמה או נעילת הכספת">
+          <span>🔒</span>
+          <div>
+            <strong id="vaultStatusTitle">SQLite Encrypted Vault</strong>
+            <small id="vaultStatusSub">מוצפן ומוגן בסיסמה (AES-256)</small>
+          </div>
+        </div>
+        <button class="btn btn-xs btn-outline btn-block" id="btnVaultAction" style="margin-bottom:8px;">
+          🔐 הגדר סיסמת הצפנה ל-SQLite
+        </button>
+        <div class="demo-controls">
+          <button class="btn-link" id="btnSeedDemo">טען נתוני הדגמה</button>
+          <span>•</span>
+          <button class="btn-link text-danger" id="btnClearDemo">נקה הדגמה</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Global Filter Topbar -->
+      <header class="topbar">
+        <div class="topbar-filters">
+          <div class="filter-group">
+            <label for="globalMonthSelect">📅 תקופה / חודש:</label>
+            <select id="globalMonthSelect" class="form-select"></select>
+          </div>
+          <div class="filter-group">
+            <label for="globalMemberSelect">👥 שיוך / בן משפחה:</label>
+            <select id="globalMemberSelect" class="form-select">
+              <option value="">כל המשפחה (מאוחד)</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="globalAccountTypeSelect">💳 סוג מקור:</label>
+            <select id="globalAccountTypeSelect" class="form-select">
+              <option value="">הכל (בנקים + אשראי + קופות גמל/מסחר)</option>
+              <option value="bank">🏦 חשבונות בנק בלבד (עו"ש)</option>
+              <option value="credit_card">💳 כרטיסי אשראי בלבד</option>
+              <option value="investment">📈 קופות גמל, השתלמות ותוכניות מסחר</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="globalAccountSelect">🏦 חשבון / כרטיס ספציפי:</label>
+            <select id="globalAccountSelect" class="form-select">
+              <option value="">כל החשבונות והכרטיסים</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <button class="btn btn-sm btn-ghost" id="btnExportCsv" title="ייצוא הנתונים הנוכחיים לקובץ CSV">
+            📤 ייצוא דוח לאקסל (CSV)
+          </button>
+        </div>
+      </header>
+
+      <!-- VIEW 1: DASHBOARD -->
+      <section id="view-dashboard" class="view-section active">
+        <!-- Quick Month Switcher Pills Bar -->
+        <div class="month-pills-bar" id="monthPillsBar"></div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card income">
+            <div class="kpi-header">
+              <span class="kpi-title">סך הכנסות בתקופה</span>
+              <span class="kpi-icon">📈</span>
+            </div>
+            <div class="kpi-value" id="kpiTotalIncome">₪0</div>
+            <div class="kpi-sub" id="kpiIncomeSub">משכורות, קצבאות והפקדות</div>
+          </div>
+
+          <div class="kpi-card expense">
+            <div class="kpi-header">
+              <span class="kpi-title">סך הוצאות בתקופה (נטו ללא כפילויות)</span>
+              <span class="kpi-icon">💸</span>
+            </div>
+            <div class="kpi-value" id="kpiTotalExpense">₪0</div>
+            <div class="kpi-sub" id="kpiExpenseSub">0 תנועות בבנקים ובכרטיסי האשראי</div>
+          </div>
+
+          <div class="kpi-card cashflow">
+            <div class="kpi-header">
+              <span class="kpi-title">תזרים נטו (חיסכון חודשי)</span>
+              <span class="kpi-icon">⚖️</span>
+            </div>
+            <div class="kpi-value" id="kpiNetCashflow">₪0</div>
+            <div class="kpi-sub" id="kpiSavingsRate">שיעור חיסכון: 0%</div>
+          </div>
+
+          <div class="kpi-card balance">
+            <div class="kpi-header">
+              <span class="kpi-title">יתרת עו"ש כוללת בבנקים</span>
+              <span class="kpi-icon">🏛️</span>
+            </div>
+            <div class="kpi-value" id="kpiBankBalance">₪0</div>
+            <div class="kpi-sub" id="kpiPreventedDouble">מניעת ספירה כפולה (אשראי/בנק): ₪0</div>
+          </div>
+        </div>
+
+        <!-- Main Charts Row -->
+        <div class="dashboard-grid-2">
+          <div class="card">
+            <div class="card-header">
+              <h3>📊 מגמת הכנסות מול הוצאות לאורך חודשים</h3>
+              <span class="badge badge-info">ניתוח תזרים רב-חודשי</span>
+            </div>
+            <div class="chart-container" id="monthlyTrendChart"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>🍩 התפלגות הוצאות לפי קטגוריות</h3>
+              <span class="badge badge-purple" id="categoryCountBadge">0 קטגוריות</span>
+            </div>
+            <div class="category-breakdown-layout">
+              <div class="donut-wrapper" id="categoryDonutChart"></div>
+              <div class="category-legend-list" id="categoryLegendList"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Accounts & Cards Breakdown + Top Merchants -->
+        <div class="dashboard-grid-2">
+          <div class="card">
+            <div class="card-header">
+              <h3>💳 ריכוז לפי חשבונות בנק וכרטיסי אשראי</h3>
+              <button class="btn btn-xs btn-outline" data-goto="accounts">ניהול חשבונות ←</button>
+            </div>
+            <div id="dashboardAccountsList" class="accounts-mini-list"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>🏪 בתי העסק וההוצאות המובילים בתקופה</h3>
+              <button class="btn btn-xs btn-outline" data-goto="transactions">לכל התנועות ←</button>
+            </div>
+            <div id="dashboardTopMerchants" class="merchants-list"></div>
+          </div>
+        </div>
+
+        <!-- Monthly Breakdown Cards Grid (דשבורד השוואתי לכל חודש) -->
+        <div class="card" style="margin-bottom: 24px;">
+          <div class="card-header">
+            <div>
+              <h3>🗓️ סיכום דשבורד לכל חודש בנפרד (לחיצה על חודש מציגה את הדשבורד המלא שלו)</h3>
+              <p class="text-muted">השוואה חודשית של הכנסות, הוצאות, הפקדות לחיסכון ותזרים נטו</p>
+            </div>
+          </div>
+          <div id="monthlyDashboardsGrid" class="monthly-dashboards-grid"></div>
+        </div>
+      </section>
+
+      <!-- VIEW 2: TRANSACTIONS EXPLORER -->
+      <section id="view-transactions" class="view-section">
+        <div class="card">
+          <div class="card-header flex-wrap gap-12">
+            <div>
+              <h2>📑 יומן תנועות מאוחד (בנקים + כרטיסי אשראי)</h2>
+              <p class="text-muted">שינוי קטגוריה בשורה מאפשר ליצור חוק אוטומטי לכל העסקאות של אותו בית עסק</p>
+            </div>
+            <div class="tx-search-bar">
+              <input type="text" id="txSearchInput" class="form-input" placeholder="🔍 חיפוש לפי שם בית עסק, הערה או כרטיס..." />
+              <select id="txCategoryFilter" class="form-select">
+                <option value="">כל הקטגוריות</option>
+              </select>
+              <select id="txFlowFilter" class="form-select">
+                <option value="">הכל (הכנסות + הוצאות)</option>
+                <option value="expense">הוצאות בלבד</option>
+                <option value="income">הכנסות בלבד</option>
+                <option value="transfer">חיובי אשראי בבנק (מוחרגים מכפילות)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>תאריך</th>
+                  <th>בית עסק / תיאור הפעולה</th>
+                  <th>חשבון בנק / כרטיס אשראי</th>
+                  <th>שיוך</th>
+                  <th>קטגוריה (לחץ לשינוי אוטומטי)</th>
+                  <th>תשלומים / הערה</th>
+                  <th>סכום חיוב</th>
+                  <th>פעולות</th>
+                </tr>
+              </thead>
+              <tbody id="transactionsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 3: ACCOUNTS, CREDIT CARDS & INVESTMENTS -->
+      <section id="view-accounts" class="view-section">
+        <div class="section-header-bar">
+          <div>
+            <h2>🏦 חשבונות בנק, כרטיסי אשראי, קופות גמל ותוכניות מסחר</h2>
+            <p class="text-muted">חיבור אוטומטי לבנקים ואשראי, מעקב צבירה והפקדות בקופות גמל, קרנות השתלמות וחשבונות מסחר עצמאי</p>
+          </div>
+          <div class="flex-gap">
+            <button class="btn btn-outline" id="btnOpenAddMemberModal">👤 הוספת בן/בת משפחה</button>
+            <button class="btn btn-primary" id="btnOpenAddAccountModal">➕ הוספת בנק / אשראי / קופת גמל ומסחר</button>
+          </div>
+        </div>
+
+        <div class="accounts-cards-grid" id="accountsCardsGrid"></div>
+      </section>
+
+      <!-- VIEW 4: BUDGETS & SAVINGS GOALS -->
+      <section id="view-budgets" class="view-section">
+        <div class="dashboard-grid-2">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3>🎯 בקרת תקציב חודשי לפי קטגוריות</h3>
+                <p class="text-muted">לחץ על תקרת התקציב של כל קטגוריה כדי לעדכן את היעד החודשי</p>
+              </div>
+              <span class="badge badge-info" id="budgetTotalSummaryBadge">תקציב מול ביצוע</span>
+            </div>
+            <div id="budgetsListContainer" class="budgets-list"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3>🏆 יעדי חיסכון משפחתיים</h3>
+                <p class="text-muted">מעקב אחר קרן חירום, חופשות ורכישות גדולות</p>
+              </div>
+              <button class="btn btn-sm btn-primary" id="btnOpenAddGoalModal">➕ יעד חדש</button>
+            </div>
+            <div id="savingsGoalsContainer" class="goals-list"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL: ADD ACCOUNT / CREDIT CARD -->
+  <div class="modal-backdrop" id="modalAddAccount">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🏦 הוספת חשבון בנק או כרטיס אשראי</h3>
+        <button class="modal-close" data-close="modalAddAccount">✕</button>
+      </div>
+      <form id="formAddAccount" class="modal-body">
+        <div class="form-row">
+          <label>מוסד פיננסי (בנק / חברת אשראי):</label>
+          <select id="accCompanySelect" class="form-select" required></select>
+        </div>
+        <div class="form-row">
+          <label>שם תצוגה במערכת:</label>
+          <input type="text" id="accNameInput" class="form-input" placeholder="לדוגמה: מקס משפחתי / פועלים עו״ש" required />
+        </div>
+        <div class="form-grid-2">
+          <div class="form-row">
+            <label>שיוך לבן/בת משפחה:</label>
+            <select id="accMemberSelect" class="form-select"></select>
+          </div>
+          <div class="form-row">
+            <label>מספר חשבון / קופה (או חפש ב-API גמל-נט):</label>
+            <div style="display:flex;gap:6px;">
+              <input type="text" id="accNumberInput" class="form-input" style="flex:1;" placeholder="למשל: 8821 או מספר מסלול גמל" />
+              <button type="button" class="btn btn-xs btn-secondary" id="btnSearchGemelApi" title="חיפוש מסלול ב-API הרשמי של משרד האוצר (גמל-נט)">
+                🔎 API גמל-נט
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="gemelApiResultsBox" style="display:none;background:rgba(15,23,42,0.85);border:1px solid #3b82f6;border-radius:10px;padding:10px;max-height:170px;overflow-y:auto;"></div>
+        <div class="form-grid-2">
+          <div class="form-row">
+            <label>יתרה נוכחית (₪):</label>
+            <input type="number" step="0.01" id="accBalanceInput" class="form-input" value="0" />
+          </div>
+          <div class="form-row">
+            <label>מסגרת אשראי (₪):</label>
+            <input type="number" step="1" id="accLimitInput" class="form-input" value="15000" />
+          </div>
+        </div>
+
+        <div class="credentials-box">
+          <div class="credentials-title">🔐 פרטי התחברות למשיכה אוטומטית (אופציונלי - מוצפן AES-256)</div>
+          <p class="text-xs text-muted">הפרטים נשמרים מוצפנים על המחשב שלך בלבד לצורך סנכרון אוטומטי.</p>
+          <div id="dynamicCredentialsFields"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" data-close="modalAddAccount">ביטול</button>
+          <button type="submit" class="btn btn-primary">שמור חשבון / כרטיס</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: IMPORT CSV / STATEMENT -->
+  <div class="modal-backdrop" id="modalImportCsv">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📥 ייבוא תנועות מקובץ בנק או חברת אשראי (CSV / TSV)</h3>
+        <button class="modal-close" data-close="modalImportCsv">✕</button>
+      </div>
+      <form id="formImportCsv" class="modal-body">
+        <div class="form-row">
+          <label>בחר לאיזה חשבון בנק או כרטיס אשראי לשייך את הקובץ:</label>
+          <select id="importAccountSelect" class="form-select" required></select>
+        </div>
+        <div class="form-row">
+          <label>בחר קובץ תנועות (CSV / TXT שהורד מאתר הבנק או האשראי):</label>
+          <input type="file" id="importFileInput" accept=".csv,.txt,.tsv" class="form-input" />
+        </div>
+        <div class="form-row">
+          <label>או הדבק ישירות טקסט מטבלת אקסל / CSV:</label>
+          <textarea id="importTextContent" rows="5" class="form-input" placeholder="תאריך עסקה,שם בית העסק,סכום חיוב&#10;15/10/2026,שופרסל דיל,420.50"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" data-close="modalImportCsv">ביטול</button>
+          <button type="submit" class="btn btn-primary">ייבא וסווג אוטומטית</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD MANUAL TRANSACTION -->
+  <div class="modal-backdrop" id="modalManualTx">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>➕ הוספת הכנסה או הוצאה ידנית</h3>
+        <button class="modal-close" data-close="modalManualTx">✕</button>
+      </div>
+      <form id="formManualTx" class="modal-body">
+        <div class="form-grid-2">
+          <div class="form-row">
+            <label>סוג תנועה:</label>
+            <select id="manualFlowType" class="form-select">
+              <option value="expense">הוצאה / חיוב (-)</option>
+              <option value="income">הכנסה / זיכוי (+)</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>תאריך עסקה:</label>
+            <input type="date" id="manualDate" class="form-input" required />
+          </div>
+        </div>
+        <div class="form-row">
+          <label>חשבון בנק / כרטיס אשראי:</label>
+          <select id="manualAccountSelect" class="form-select" required></select>
+        </div>
+        <div class="form-row">
+          <label>תיאור / שם בית העסק:</label>
+          <input type="text" id="manualDesc" class="form-input" placeholder="לדוגמה: שופרסל / משכורת / העברת ביט" required />
+        </div>
+        <div class="form-grid-2">
+          <div class="form-row">
+            <label>סכום (₪):</label>
+            <input type="number" step="0.01" id="manualAmount" class="form-input" placeholder="0.00" required />
+          </div>
+          <div class="form-row">
+            <label>קטגוריה (השאר אוטומטי לזיהוי חכם):</label>
+            <select id="manualCategorySelect" class="form-select">
+              <option value="">✨ זיהוי אוטומטי חכם</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>הערה (אופציונלי):</label>
+          <input type="text" id="manualMemo" class="form-input" placeholder="פרטים נוספים..." />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" data-close="modalManualTx">ביטול</button>
+          <button type="submit" class="btn btn-primary">שמור תנועה</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD FAMILY MEMBER -->
+  <div class="modal-backdrop" id="modalAddMember">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>👤 הוספת בן/בת משפחה או שותף לחשבון</h3>
+        <button class="modal-close" data-close="modalAddMember">✕</button>
+      </div>
+      <form id="formAddMember" class="modal-body">
+        <div class="form-row">
+          <label>שם תצוגה:</label>
+          <input type="text" id="memberNameInput" class="form-input" placeholder="למשל: דניאל / חשבון עסקי" required />
+        </div>
+        <div class="form-grid-2">
+          <div class="form-row">
+            <label>תפקיד / תיאור:</label>
+            <input type="text" id="memberRoleInput" class="form-input" value="בן/בת זוג" />
+          </div>
+          <div class="form-row">
+            <label>אייקון:</label>
+            <select id="memberAvatarSelect" class="form-select">
+              <option value="👨‍💻">👨‍💻 גבר</option>
+              <option value="👩‍⚕️">👩‍⚕️ אישה</option>
+              <option value="🏡">🏡 משותף</option>
+              <option value="🏢">🏢 עסקי</option>
+              <option value="🎓">🎓 ילד/סטודנט</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" data-close="modalAddMember">ביטול</button>
+          <button type="submit" class="btn btn-primary">הוסף</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD SAVINGS GOAL -->
+  <div class="modal-backdrop" id="modalAddGoal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🏆 הוספת יעד חיסכון חדש</h3>
+        <button class="modal-close" data-close="modalAddGoal">✕</button>
+      </div>
+      <form id="formAddGoal" class="modal-body">
+        <div class="form-row">
+          <label>שם היעד:</label>
+          <input type="text" id="goalNameInput" class="form-input" placeholder="לדוגמה: חופשה משפחתית / החלפת רכב" required />
+        </div>
+        <div class="form-grid-2">
+          <div class="form-row">
+            <label>סכום יעד מבוקש (₪):</label>
+            <input type="number" id="goalTargetInput" class="form-input" required />
+          </div>
+          <div class="form-row">
+            <label>סכום שנחסך עד כה (₪):</label>
+            <input type="number" id="goalCurrentInput" class="form-input" value="0" required />
+          </div>
+        </div>
+        <div class="form-row">
+          <label>תאריך יעד:</label>
+          <input type="date" id="goalDateInput" class="form-input" />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" data-close="modalAddGoal">ביטול</button>
+          <button type="submit" class="btn btn-primary">שמור יעד</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: OTP / SMS VERIFICATION POPUP -->
+  <div class="modal-backdrop" id="modalOtpPrompt" style="z-index: 2500;">
+    <div class="modal-card" style="max-width: 440px; border: 2px solid #3b82f6;">
+      <div class="modal-header">
+        <h3>📲 אימות דו-שלבי (קוד SMS מהבנק)</h3>
+        <button class="modal-close" data-close="modalOtpPrompt">✕</button>
+      </div>
+      <form id="formOtpPrompt" class="modal-body">
+        <input type="hidden" id="otpAccountIdInput" />
+        <p id="otpPromptText" style="font-size: 0.95rem; color: #e2e8f0; line-height: 1.5;">
+          הבנק שלח כעת קוד אימות ב-SMS לטלפון הנייד שלך. הזן אותו כאן להמשך הסנכרון:
+        </p>
+        <div class="form-row">
+          <label>קוד אימות (OTP):</label>
+          <input
+            type="text"
+            id="otpCodeInput"
+            class="form-input"
+            placeholder="הזן את הקוד שקיבלת ב-SMS..."
+            autocomplete="one-time-code"
+            inputmode="numeric"
+            style="font-size: 1.5rem; text-align: center; letter-spacing: 6px; font-weight: 800; direction: ltr;"
+            required
+          />
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary btn-block">אמת קוד והמשך סנכרון 🚀</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: SQLITE VAULT LOCK / PASSWORD SETUP -->
+  <div class="modal-backdrop" id="modalVaultPassword" style="z-index: 3000; background: rgba(2, 6, 23, 0.92);">
+    <div class="modal-card" style="max-width: 440px; border: 2px solid #10b981;">
+      <div class="modal-header">
+        <h3 id="vaultModalTitle">🔐 הצפנת מסד הנתונים (SQLite Vault)</h3>
+        <button class="modal-close" id="btnCloseVaultModal" data-close="modalVaultPassword">✕</button>
+      </div>
+      <form id="formVaultPassword" class="modal-body">
+        <input type="hidden" id="vaultModeInput" value="setup" />
+        <p id="vaultModalDesc" style="font-size: 0.92rem; color: #cbd5e1; line-height: 1.5;">
+          הגדר סיסמה ראשית (Master Password). כל קובץ מסד הנתונים SQLite ופרטי הבנקים יוצפנו בהצפנת <strong>AES-256-GCM</strong> וייפתחו אך ורק באמצעות סיסמה זו.
+        </p>
+        <div class="form-row">
+          <label for="vaultPasswordInput">סיסמת מסד הנתונים:</label>
+          <input
+            type="password"
+            id="vaultPasswordInput"
+            class="form-input"
+            placeholder="הזן סיסמה (לפחות 4 תווים)..."
+            required
+          />
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary btn-block" id="btnVaultSubmit">
+            🔒 הצפן ופתח את מסד הנתונים
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

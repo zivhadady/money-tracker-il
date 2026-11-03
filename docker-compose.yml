@@ -1,0 +1,15 @@
+services:
+  money-tracker:
+    build: .
+    container_name: money-tracker-il
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PORT=3000
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+    shm_size: "512m"
+    security_opt:
+      - seccomp:unconfined

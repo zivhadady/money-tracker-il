@@ -1,0 +1,13 @@
+{
+  "name": "money-tracker-il",
+  "version": "1.0.0",
+  "description": "מערכת מקומית לאיסוף וניתוח הכנסות והוצאות מכל חשבונות הבנק וכרטיסי האשראי בישראל",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node test/verify.js"
+  },
+  "dependencies": {
+    "israeli-bank-scrapers": "latest"
+  }
+}

@@ -6,6 +6,12 @@ data/.*
 # Host-specific bin symlinks
 bin/
 
+# Local agent & MCP configs
+.agents/
+.agent/
+_agents/
+_agent/
+
 # Dependencies
 node_modules/
 npm-debug.log*
